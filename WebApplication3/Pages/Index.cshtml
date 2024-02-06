@@ -1,0 +1,69 @@
+﻿@page
+@using Microsoft.AspNetCore.DataProtection;
+@using Microsoft.AspNetCore.Http
+@using System.Security.Claims
+@model IndexModel
+@inject IDataProtectionProvider DataProtectionProvider
+@{
+    ViewData["Title"] = "Home page";
+}
+@{
+    // Function to decrypt the protected data
+    Func<string, string> decryptData = (string protectedData) =>
+    {
+        var protector = DataProtectionProvider.CreateProtector("CreditCardProtection");
+        return protector.Unprotect(protectedData);
+    };
+
+    // Decrypt the data
+    var billingAddress = decryptData(ViewData["BillingAddress"] as string);
+    var shippingAddress = decryptData(ViewData["ShippingAddress"] as string);
+}
+@if (HttpContext.Session.GetString("SessionTimedOut") == "true")
+{
+    <div class="text-center">
+        <h1 class="display-4">Session Timeout</h1>
+        <p>Your session has timed out. Please log in again.</p>
+        <form method="post" asp-page-handler="Logout">
+            <button type="submit" class="btn btn-primary">Log In</button>
+        </form>
+    </div>
+}
+
+<script>
+
+    // Function to show a popup message
+    function showSessionTimeoutPopup() {
+        alert('Your session has timed out. Please log in again.');
+        document.getElementById('logoutForm').submit();
+    }
+
+    var sessionTimeoutSeconds = @(Convert.ToInt32(TimeSpan.FromMinutes(10).TotalSeconds)); // Match the server-side timeout
+    var sessionTimeoutMilliseconds = sessionTimeoutSeconds * 1000;
+    setTimeout(showSessionTimeoutPopup, sessionTimeoutMilliseconds);
+
+</script>
+
+<div class="text-center">
+    <h1 class="display-4">Account Details</h1>
+
+    @if (User.Identity.IsAuthenticated)
+    {
+        <div>
+            <p>Name: @ViewData["FirstName"] @ViewData["LastName"]</p>
+            <p>Email: @ViewData["Email"]</p>
+            <p>Mobile Number: @ViewData["MobileNumber"]</p>
+            <p>Billing Address: @billingAddress</p>
+            <p>Shipping Address: @shippingAddress</p>
+            <p>Image Name: @ViewData["Photo"]</p>
+        </div>
+    }
+    else
+    {
+        <script>window.location.href = '/login';</script>
+    }
+
+    <form id="logoutForm" method="post" asp-page-handler="Logout" style="display: none;">
+        <button type="submit" class="btn btn-primary">Log Out</button>
+    </form>
+</div>
